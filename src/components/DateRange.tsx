@@ -1,10 +1,17 @@
-import { useCallback, useState, createContext, ChangeEvent } from "react";
+/* eslint-disable @typescript-eslint/no-non-null-assertion */
+import {
+  useCallback,
+  useState,
+  createContext,
+  ChangeEvent,
+  useContext,
+  useMemo,
+} from "react";
 import {
   Stack,
   HStack,
   Box,
   Input,
-  useBoolean,
   Popover,
   PopoverTrigger,
   PopoverContent,
@@ -16,27 +23,50 @@ import startOfMonth from "date-fns/startOfMonth";
 import endOfMonth from "date-fns/endOfMonth";
 import addMonths from "date-fns/addMonths";
 import parse from "date-fns/parse";
+import format from "date-fns/format";
 
+type Focus = "start" | "end" | null;
+type Selection = {
+  start: Date | null;
+  end: Date | null;
+};
 interface ContextType {
-  focused: "start" | "end" | null;
+  focused: Focus;
+  selection: Selection;
+  isHovered: boolean;
   hovering: Date | null;
+  inRange: (date: Date, min: Date, max: Date) => boolean;
+  isInScope: (d: Date) => boolean;
+  setHovering: (d: Date | null) => void;
+  setHover: (d: boolean) => void;
+  setSelection: (d: Selection) => void;
   inHoverRange: (d: Date) => boolean;
   onSelect: (d: Date) => void;
+  setFocused: (d: Focus) => void;
 }
 
 const AppContext = createContext<ContextType>({
   focused: null,
   hovering: null,
+  selection: { start: null, end: null },
+  isHovered: false,
+  inRange: () => false,
+  isInScope: () => false,
+  setHovering: () => null,
+  setHover: () => null,
+  setSelection: () => null,
   inHoverRange: () => false,
   onSelect: () => null,
+  setFocused: () => null,
 });
 
 const DateRange = () => {
-  const [selected, setSelected] = useState<[Date | null, Date | null]>([
-    null,
-    null,
-  ]);
-  const [isHovered, setHover] = useBoolean(false);
+  const [focused, setFocused] = useState<Focus>(null);
+  const [selection, setSelection] = useState<Selection>({
+    start: null,
+    end: null,
+  });
+  const [isHovered, setHover] = useState<boolean>(false);
   const [hovering, setHovering] = useState<Date | null>(null);
   const { calendar, viewing, inRange } = useLilius({
     numberOfMonths: 2,
@@ -54,48 +84,57 @@ const DateRange = () => {
     [inRange, viewing]
   );
 
-  const inHoverRange = (d: Date) => {
-    if (selected[0] === null) return false;
-    if (selected[1]) return false;
-    if (!hovering) return false;
+  const inHoverRange = useCallback(
+    (d: Date) => {
+      if (!hovering) return false;
+      if (selection.start && focused === "end") {
+        return inRange(d, selection.start, hovering);
+      }
+      if (selection.end && focused === "start") {
+        return inRange(d, hovering, selection.end);
+      }
 
-    return inRange(d, selected[0], hovering);
-  };
+      return false;
+    },
+    [hovering, inRange, selection, focused]
+  );
 
-  const handleSelect = (d: Date) => {
-    setSelected((prev) => {
-      if (!prev[0]) return [d, prev[1]];
-      return [prev[0], d];
-    });
-  };
-
-  const handleHover = (d: Date) => {
-    setHovering(d);
-    setHover.on();
-  };
-
-  const handleLeave = () => {
-    setHover.off();
-  };
-
-  const handleInputChange =
-    (index: 0 | 1) => (e: ChangeEvent<HTMLInputElement>) => {
-      const targetDate = parse(e.currentTarget.value, "yyyy-MM-dd", new Date());
-      setSelected((prev) => {
-        if (index === 0) return [targetDate, prev[1]];
-        return [prev[0], targetDate];
+  const onSelect = useCallback(
+    (d: Date) => {
+      setSelection((prev) => {
+        if (!focused) return prev;
+        return Object.assign({}, prev, { [focused]: d });
       });
-
-      console.log(selected);
-    };
+      setFocused((prev) => {
+        if (prev === "end") {
+          if (selection.start) return null;
+          return "start";
+        }
+        if (prev === "start") {
+          if (selection.end) return null;
+          return "end";
+        }
+        return "start";
+      });
+    },
+    [focused, selection]
+  );
 
   return (
     <AppContext.Provider
       value={{
-        focused: null,
+        inRange,
+        isInScope,
+        isHovered,
+        setHover,
+        setHovering,
+        selection,
+        setSelection,
+        focused,
+        setFocused,
         hovering,
         inHoverRange,
-        onSelect: handleSelect,
+        onSelect,
       }}
     >
       <Popover>
@@ -107,8 +146,8 @@ const DateRange = () => {
               borderStyle="solid"
               borderWidth="1px"
             >
-              <InputDate onChange={handleInputChange(0)} />
-              <InputDate onChange={handleInputChange(1)} />
+              <InputDate name="start" />
+              <InputDate name="end" />
             </HStack>
           </PopoverTrigger>
           <PopoverContent w="full">
@@ -124,27 +163,10 @@ const DateRange = () => {
                         key={`${time}-${midx}-${widx}`}
                       >
                         {weeks.map((day) => (
-                          <Box
+                          <Day
                             key={`${time}-${midx}-${widx}-${day.getTime()}`}
-                            flex={1}
-                            px={2}
-                            py={1}
-                            fontSize="sm"
-                            _hover={{ bg: "gray.100" }}
-                            cursor="pointer"
-                            textAlign="center"
-                            bg={
-                              isHovered && inHoverRange(day)
-                                ? "blue.100"
-                                : undefined
-                            }
-                            onMouseEnter={() => handleHover(day)}
-                            onMouseLeave={handleLeave}
-                            onClick={() => handleSelect(day)}
-                            color={isInScope(day) ? "gray.800" : "gray.300"}
-                          >
-                            {day.getDate()}
-                          </Box>
+                            day={day}
+                          />
                         ))}
                       </HStack>
                     ))}
@@ -156,6 +178,59 @@ const DateRange = () => {
         </Box>
       </Popover>
     </AppContext.Provider>
+  );
+};
+
+const Day = ({ day }: { day: Date }) => {
+  const {
+    onSelect,
+    inHoverRange,
+    setHovering,
+    setHover,
+    isHovered,
+    isInScope,
+    selection,
+    inRange,
+  } = useContext(AppContext);
+
+  const handleHover = (d: Date) => {
+    setHovering(d);
+    setHover(true);
+  };
+
+  const handleLeave = () => {
+    setHover(false);
+  };
+
+  const isSelected = selection.start === day || selection.end === day;
+  const isInSelectionRange = useMemo(() => {
+    if (!selection.start || !selection.end) return false;
+    return inRange(day, selection.start, selection.end);
+  }, [selection, inRange, day]);
+
+  return (
+    <Box
+      flex={1}
+      px={2}
+      py={1}
+      fontSize="sm"
+      _hover={{ bg: "gray.100" }}
+      cursor="pointer"
+      textAlign="center"
+      bg={
+        isSelected
+          ? "blue.300"
+          : (isHovered && inHoverRange(day)) || isInSelectionRange
+          ? "blue.100"
+          : undefined
+      }
+      onMouseEnter={() => handleHover(day)}
+      onMouseLeave={handleLeave}
+      onClick={() => onSelect(day)}
+      color={isInScope(day) ? "gray.800" : "gray.300"}
+    >
+      {day.getDate()}
+    </Box>
   );
 };
 
@@ -185,7 +260,21 @@ const Weeks = () => (
   </HStack>
 );
 
-const InputDate = (props: Pick<InputProps, "onChange" | "value">) => {
+const InputDate = (
+  props: Pick<InputProps, "onChange" | "value"> & {
+    name: "start" | "end";
+  }
+) => {
+  const context = useContext(AppContext);
+
+  const handleFocus = () => {
+    context.setFocused(props.name);
+  };
+  const value = useMemo(() => {
+    if (!context.selection[props.name]) return undefined;
+    return format(context.selection[props.name]!, "yyyy-MM-dd");
+  }, [context.selection, props.name]);
+
   return (
     <Input
       variant="unstyled"
@@ -194,8 +283,10 @@ const InputDate = (props: Pick<InputProps, "onChange" | "value">) => {
       py="1"
       type="date"
       borderBottomWidth="2px"
-      borderColor="transparent"
       borderStyle="solid"
+      value={value}
+      onFocus={handleFocus}
+      borderColor={context.focused === props.name ? "blue.500" : "transparent"}
       _focus={{
         borderColor: "blue.500",
       }}
