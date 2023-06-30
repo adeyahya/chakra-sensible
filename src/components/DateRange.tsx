@@ -38,6 +38,7 @@ import addMonths from "date-fns/addMonths";
 import parse from "date-fns/parse";
 import format from "date-fns/format";
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const isValidDate = (maybeDate: any) =>
   Object.prototype.toString.call(maybeDate) === "[object Date]";
 
@@ -141,6 +142,10 @@ const DateRange = () => {
     [focused, selection]
   );
 
+  const handleOpen = () => {
+    if (focused === null) setFocused("start");
+  };
+
   return (
     <AppContext.Provider
       value={{
@@ -158,10 +163,29 @@ const DateRange = () => {
         onSelect,
       }}
     >
-      <Popover>
-        <Box w="full">
+      {focused && (
+        <Box
+          onClick={() => setFocused(null)}
+          w="100vw"
+          h="100vh"
+          position="fixed"
+          top="0"
+          left="0"
+          zIndex={998}
+        />
+      )}
+      <Popover isOpen={focused !== null}>
+        <Box
+          onClick={(e) => {
+            e.stopPropagation();
+          }}
+          w="full"
+          position="relative"
+          zIndex={999}
+        >
           <PopoverTrigger>
             <HStack
+              onClick={handleOpen}
               w="full"
               borderRadius="md"
               borderColor="gray.200"
@@ -270,6 +294,7 @@ const Day = ({ day, segment }: { day: Date; segment: "start" | "end" }) => {
     isHovered,
     inScope,
     selection,
+    focused,
     inRange,
   } = useContext(AppContext);
 
@@ -285,14 +310,28 @@ const Day = ({ day, segment }: { day: Date; segment: "start" | "end" }) => {
   const isSelected =
     selection.start?.getTime() === day.getTime() ||
     selection.end?.getTime() === day.getTime();
+
   const isInSelectionRange = useMemo(() => {
     if (!selection.start || !selection.end) return false;
     return inRange(day, selection.start, selection.end);
   }, [selection, inRange, day]);
+
   const isInScope = inScope(segment)(day);
+
   const isToday = useMemo(() => {
     return format(day, "ddMMyy") === format(new Date(), "ddMMyy");
   }, [day]);
+
+  const isDisabled = useMemo(() => {
+    if (!selection.start && !selection.end) return false;
+    if (selection.start && focused === "end") {
+      return day.getTime() < selection.start.getTime();
+    }
+    if (selection.end && focused === "start") {
+      return day.getTime() > selection.end.getTime();
+    }
+    return false;
+  }, [day, focused, selection.end, selection.start]);
 
   return (
     <Box
@@ -300,11 +339,15 @@ const Day = ({ day, segment }: { day: Date; segment: "start" | "end" }) => {
       px={2}
       py={1}
       fontSize="sm"
-      _hover={isInScope && !isSelected ? { bg: "gray.100" } : undefined}
+      _hover={
+        isInScope && !isSelected && !isDisabled ? { bg: "gray.100" } : undefined
+      }
       cursor="pointer"
       textAlign="center"
       bg={
-        !isInScope
+        isDisabled
+          ? "gray.100"
+          : !isInScope
           ? undefined
           : isSelected
           ? "blue.300"
@@ -314,7 +357,7 @@ const Day = ({ day, segment }: { day: Date; segment: "start" | "end" }) => {
       }
       onMouseEnter={isInScope ? () => handleHover(day) : undefined}
       onMouseLeave={handleLeave}
-      onClick={() => onSelect(day)}
+      onClick={() => !isDisabled && onSelect(day)}
       fontWeight={isToday ? "bold" : undefined}
       color={isInScope ? "gray.800" : "gray.300"}
     >
