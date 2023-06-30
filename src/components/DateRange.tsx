@@ -23,6 +23,7 @@ import {
   Flex,
   Text,
   Button,
+  BoxProps,
 } from "@chakra-ui/react";
 import {
   ArrowRightIcon,
@@ -56,6 +57,7 @@ interface ContextType {
   selection: Selection;
   isHovered: boolean;
   hovering: Date | null;
+  colorScheme: string;
   inRange: (date: Date, min: Date, max: Date) => boolean;
   inScope: (segment: "start" | "end") => (d: Date) => boolean;
   setHovering: (d: Date | null) => void;
@@ -71,6 +73,7 @@ const AppContext = createContext<ContextType>({
   hovering: null,
   selection: { start: null, end: null },
   isHovered: false,
+  colorScheme: "blue",
   inRange: () => false,
   inScope: () => () => false,
   setHovering: () => null,
@@ -81,18 +84,29 @@ const AppContext = createContext<ContextType>({
   setFocused: () => null,
 });
 
-export type DateRangeProps = {
+export type DateRangeProps = BoxProps & {
   value?: [Value, Value];
   defaultValue?: [Value, Value];
   onChange?: (d: [Value, Value]) => void;
   min?: Date;
   max?: Date;
+  colorScheme?: string;
 };
 export const DateRange = (props: DateRangeProps) => {
+  const {
+    value,
+    defaultValue,
+    onChange,
+    colorScheme = "blue",
+    min,
+    max,
+    children,
+    ...rest
+  } = props;
   const [focused, setFocused] = useState<Focus>(null);
   const [selection, setSelection] = useState<Selection>({
-    start: props.defaultValue?.[0] ?? props.value?.[0] ?? null,
-    end: props.defaultValue?.[1] ?? props.value?.[1] ?? null,
+    start: defaultValue?.[0] ?? value?.[0] ?? null,
+    end: defaultValue?.[1] ?? value?.[1] ?? null,
   });
   const [isHovered, setHover] = useState<boolean>(false);
   const [hovering, setHovering] = useState<Date | null>(null);
@@ -110,10 +124,10 @@ export const DateRange = (props: DateRangeProps) => {
   });
 
   useEffect(() => {
-    if (!props.onChange) return;
-    props.onChange([selection.start, selection.end]);
+    if (!onChange) return;
+    onChange([selection.start, selection.end]);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selection, props.onChange]);
+  }, [selection, onChange]);
 
   const time = viewing.getTime();
 
@@ -164,9 +178,12 @@ export const DateRange = (props: DateRangeProps) => {
     if (focused === null) setFocused("start");
   };
 
+  const isOpen = focused !== null;
+
   return (
     <AppContext.Provider
       value={{
+        colorScheme,
         inRange,
         inScope,
         isHovered,
@@ -192,14 +209,14 @@ export const DateRange = (props: DateRangeProps) => {
           zIndex={998}
         />
       )}
-      <Popover isLazy isOpen={focused !== null}>
+      <Popover isLazy isOpen={isOpen}>
         <Box
           onClick={(e) => {
             e.stopPropagation();
           }}
           w="full"
           position="relative"
-          zIndex={999}
+          zIndex={isOpen ? 999 : 1}
         >
           <PopoverTrigger>
             <HStack
@@ -209,6 +226,7 @@ export const DateRange = (props: DateRangeProps) => {
               borderColor="gray.200"
               borderStyle="solid"
               borderWidth="1px"
+              {...rest}
             >
               <InputDate name="start" />
               <ArrowForwardIcon color="gray.300" />
@@ -323,6 +341,7 @@ const Day = ({ day, segment }: { day: Date; segment: "start" | "end" }) => {
     selection,
     focused,
     inRange,
+    colorScheme,
   } = useContext(AppContext);
 
   const handleHover = (d: Date) => {
@@ -367,9 +386,9 @@ const Day = ({ day, segment }: { day: Date; segment: "start" | "end" }) => {
   const bg = useMemo(() => {
     if (!isInScope) return undefined;
     if (isDisabled) return "gray.100";
-    if (isSelected) return "blue.300";
-    if (isHovered && inHoverRange(day)) return "blue.100";
-    if (isInSelectionRange) return "blue.100";
+    if (isSelected) return `${colorScheme}.300`;
+    if (isHovered && inHoverRange(day)) return `${colorScheme}.100`;
+    if (isInSelectionRange) return `${colorScheme}.100`;
     return undefined;
   }, [
     day,
@@ -435,7 +454,7 @@ const InputDate = (
     name: "start" | "end";
   }
 ) => {
-  const { setFocused, selection, setSelection, focused } =
+  const { setFocused, selection, setSelection, focused, colorScheme } =
     useContext(AppContext);
 
   const handleFocus = () => {
@@ -488,12 +507,14 @@ const InputDate = (
       onChange={handleChange}
       value={value}
       onFocus={handleFocus}
-      borderColor={focused === props.name ? "blue.500" : "transparent"}
+      borderColor={
+        focused === props.name ? `${colorScheme}.500` : "transparent"
+      }
       _focus={{
-        borderColor: "blue.500",
+        borderColor: `${colorScheme}.500`,
       }}
       _active={{
-        borderColor: "blue.500",
+        borderColor: `${colorScheme}.500`,
       }}
       size="md"
       css={{
