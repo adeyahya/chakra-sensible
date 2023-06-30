@@ -6,6 +6,7 @@ import {
   ChangeEvent,
   useContext,
   useMemo,
+  useEffect,
 } from "react";
 import {
   Stack,
@@ -30,6 +31,7 @@ import {
   ChevronLeftIcon,
   ArrowForwardIcon,
   SmallCloseIcon,
+  CalendarIcon,
 } from "@chakra-ui/icons";
 import { useLilius } from "use-lilius";
 import startOfMonth from "date-fns/startOfMonth";
@@ -37,15 +39,17 @@ import endOfMonth from "date-fns/endOfMonth";
 import addMonths from "date-fns/addMonths";
 import parse from "date-fns/parse";
 import format from "date-fns/format";
+import { isDayEq } from "../utils";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const isValidDate = (maybeDate: any) =>
   Object.prototype.toString.call(maybeDate) === "[object Date]";
 
+type Value = Date | null;
 type Focus = "start" | "end" | null;
 type Selection = {
-  start: Date | null;
-  end: Date | null;
+  start: Value;
+  end: Value;
 };
 interface ContextType {
   focused: Focus;
@@ -77,11 +81,18 @@ const AppContext = createContext<ContextType>({
   setFocused: () => null,
 });
 
-const DateRange = () => {
+type DateRangeProps = {
+  value?: [Value, Value];
+  defaultValue?: [Value, Value];
+  onChange?: (d: [Value, Value]) => void;
+  min?: Date;
+  max?: Date;
+};
+const DateRange = (props: DateRangeProps) => {
   const [focused, setFocused] = useState<Focus>(null);
   const [selection, setSelection] = useState<Selection>({
-    start: null,
-    end: null,
+    start: props.defaultValue?.[0] ?? props.value?.[0] ?? null,
+    end: props.defaultValue?.[1] ?? props.value?.[1] ?? null,
   });
   const [isHovered, setHover] = useState<boolean>(false);
   const [hovering, setHovering] = useState<Date | null>(null);
@@ -97,6 +108,13 @@ const DateRange = () => {
   } = useLilius({
     numberOfMonths: 2,
   });
+
+  useEffect(() => {
+    if (!props.onChange) return;
+    props.onChange([selection.start, selection.end]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selection, props.onChange]);
+
   const time = viewing.getTime();
 
   const handleClear = () => setSelection({ start: null, end: null });
@@ -174,7 +192,7 @@ const DateRange = () => {
           zIndex={998}
         />
       )}
-      <Popover isOpen={focused !== null}>
+      <Popover isLazy isOpen={focused !== null}>
         <Box
           onClick={(e) => {
             e.stopPropagation();
@@ -195,16 +213,25 @@ const DateRange = () => {
               <InputDate name="start" />
               <ArrowForwardIcon color="gray.300" />
               <InputDate name="end" />
-              <IconButton
-                opacity={0.2}
-                onClick={handleClear}
-                _hover={{ opacity: 1 }}
-                mr="1"
-                size="xs"
-                variant="unstyled"
-                aria-label="clear"
-                icon={<SmallCloseIcon color="gray.600" />}
-              />
+              <Box position="relative" mr="1" role="group">
+                <CalendarIcon
+                  position="absolute"
+                  top="50%"
+                  left="50%"
+                  transform="translate(-50%, -50%)"
+                  color="gray.500"
+                  _groupHover={{ display: "none" }}
+                />
+                <IconButton
+                  opacity={0.2}
+                  onClick={handleClear}
+                  _hover={{ opacity: 1 }}
+                  size="xs"
+                  variant="unstyled"
+                  aria-label="clear"
+                  icon={<SmallCloseIcon color="gray.600" />}
+                />
+              </Box>
             </HStack>
           </PopoverTrigger>
           <PopoverContent w="full">
@@ -307,16 +334,20 @@ const Day = ({ day, segment }: { day: Date; segment: "start" | "end" }) => {
     setHover(false);
   };
 
-  const isSelected =
-    selection.start?.getTime() === day.getTime() ||
-    selection.end?.getTime() === day.getTime();
+  const isSelected = useMemo(
+    () => isDayEq(selection.start, day) || isDayEq(selection.end, day),
+    [day, selection.end, selection.start]
+  );
 
   const isInSelectionRange = useMemo(() => {
     if (!selection.start || !selection.end) return false;
     return inRange(day, selection.start, selection.end);
   }, [selection, inRange, day]);
 
-  const isInScope = inScope(segment)(day);
+  const isInScope = useMemo(
+    () => inScope(segment)(day),
+    [segment, day, inScope]
+  );
 
   const isToday = useMemo(() => {
     return format(day, "ddMMyy") === format(new Date(), "ddMMyy");
@@ -333,6 +364,23 @@ const Day = ({ day, segment }: { day: Date; segment: "start" | "end" }) => {
     return false;
   }, [day, focused, selection.end, selection.start]);
 
+  const bg = useMemo(() => {
+    if (!isInScope) return undefined;
+    if (isDisabled) return "gray.100";
+    if (isSelected) return "blue.300";
+    if (isHovered && inHoverRange(day)) return "blue.100";
+    if (isInSelectionRange) return "blue.100";
+    return undefined;
+  }, [
+    day,
+    inHoverRange,
+    isDisabled,
+    isHovered,
+    isInSelectionRange,
+    isSelected,
+    isInScope,
+  ]);
+
   return (
     <Box
       flex={1}
@@ -344,17 +392,7 @@ const Day = ({ day, segment }: { day: Date; segment: "start" | "end" }) => {
       }
       cursor="pointer"
       textAlign="center"
-      bg={
-        isDisabled
-          ? "gray.100"
-          : !isInScope
-          ? undefined
-          : isSelected
-          ? "blue.300"
-          : (isHovered && inHoverRange(day)) || isInSelectionRange
-          ? "blue.100"
-          : undefined
-      }
+      bg={bg}
       onMouseEnter={isInScope ? () => handleHover(day) : undefined}
       onMouseLeave={handleLeave}
       onClick={() => !isDisabled && onSelect(day)}
@@ -413,6 +451,25 @@ const InputDate = (
     if (!val) return;
     const parsed = parse(val, "yyyy-MM-dd", new Date());
     if (!isValidDate(parsed)) return;
+
+    /**
+     * prevent update end to be earlier than start and
+     * prevent update start later than end
+     */
+    if (
+      selection.start &&
+      props.name === "end" &&
+      parsed.getTime() <= selection.start.getTime()
+    )
+      return;
+
+    if (
+      selection.end &&
+      props.name === "start" &&
+      parsed.getTime() >= selection.end.getTime()
+    )
+      return;
+
     setSelection((prev) => {
       return Object.assign({}, prev, { [props.name]: parsed });
     });
