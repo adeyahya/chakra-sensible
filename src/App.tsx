@@ -1,5 +1,5 @@
 import { ChakraProvider, Container } from "@chakra-ui/react";
-import DateRange from "./components/DateRange";
+import { DateRange } from ".";
 
 const App = () => {
   return (

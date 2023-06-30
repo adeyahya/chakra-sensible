@@ -81,14 +81,14 @@ const AppContext = createContext<ContextType>({
   setFocused: () => null,
 });
 
-type DateRangeProps = {
+export type DateRangeProps = {
   value?: [Value, Value];
   defaultValue?: [Value, Value];
   onChange?: (d: [Value, Value]) => void;
   min?: Date;
   max?: Date;
 };
-const DateRange = (props: DateRangeProps) => {
+export const DateRange = (props: DateRangeProps) => {
   const [focused, setFocused] = useState<Focus>(null);
   const [selection, setSelection] = useState<Selection>({
     start: props.defaultValue?.[0] ?? props.value?.[0] ?? null,
@@ -505,5 +505,3 @@ const InputDate = (
     />
   );
 };
-
-export default DateRange;
