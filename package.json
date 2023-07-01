@@ -20,9 +20,10 @@
   "module": "./dist/index.es.js",
   "types": "./dist/index.d.ts",
   "dependencies": {
+    "@chakra-ui/icons": "^1.0.0",
     "date-fns": "^2.30.0",
     "use-lilius": "^2.0.3",
-    "@chakra-ui/icons": "^1.0.0"
+    "valtio": "^1.10.6"
   },
   "peerDependencies": {
     "@chakra-ui/react": "^1.0.0",

@@ -1,5 +1,7 @@
+import endOfDay from "date-fns/endOfDay";
 import format from "date-fns/format";
 import parse from "date-fns/parse";
+import startOfDay from "date-fns/startOfDay";
 
 export const isDayEq = (d1: Date | null, d2: Date | null) => {
   if (!d1) return false;
@@ -15,4 +17,11 @@ export const safeParse = (dateString: string, f: string): Date | null => {
   } catch (error) {
     return null;
   }
+};
+
+export const inRange = (d: Date, min: Date, max: Date) => {
+  const targetTime = d.getTime();
+  const minTime = startOfDay(min).getTime();
+  const maxTime = endOfDay(max).getTime();
+  return targetTime < maxTime && targetTime > minTime;
 };
