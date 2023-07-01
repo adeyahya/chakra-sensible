@@ -79,6 +79,8 @@ export const DateTimeRange = (props: DateRangeProps) => {
   useEffect(() => {
     state.viewing = viewing;
     if (props.colorScheme) state.colorScheme = props.colorScheme;
+    if (props.max) state.max = props.max;
+    if (props.min) state.min = props.min;
   }, [viewing, state, props]);
 
   useEffect(() => {
@@ -101,6 +103,11 @@ export const DateTimeRange = (props: DateRangeProps) => {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [props.value]);
+
+  const handleNext = () => {
+    if (snap.focused === "start") return (state.focused = "end");
+    if (snap.focused === "end") return (state.focused = null);
+  };
 
   const time = viewing.getTime();
 
@@ -249,7 +256,13 @@ export const DateTimeRange = (props: DateRangeProps) => {
                 </Box>
                 <Clock value={currentValue} onChange={onSelect(state)(snap)} />
               </Flex>
-              <Flex flexDir="row">
+              <Flex
+                mt={4}
+                borderTopWidth="1px"
+                borderColor="gray.100"
+                justify="space-between"
+                flexDir="row"
+              >
                 <Button
                   mt={3}
                   ml={2}
@@ -259,6 +272,16 @@ export const DateTimeRange = (props: DateRangeProps) => {
                   onClick={viewToday}
                 >
                   Today
+                </Button>
+                <Button
+                  mt={3}
+                  mr={4}
+                  mb={1}
+                  size="sm"
+                  variant="link"
+                  onClick={handleNext}
+                >
+                  Next
                 </Button>
               </Flex>
             </PopoverBody>

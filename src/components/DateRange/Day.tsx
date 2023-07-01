@@ -39,6 +39,8 @@ const Day = memo(
     }, [day]);
 
     const isDisabled = useMemo(() => {
+      if (snap.max && day.getTime() > snap.max.getTime()) return true;
+      if (snap.min && day.getTime() < snap.min.getTime()) return true;
       if (!snap.selection.start && !snap.selection.end) return false;
       if (snap.selection.start && snap.focused === "end") {
         return day.getTime() < snap.selection.start.getTime();
@@ -47,11 +49,11 @@ const Day = memo(
         return day.getTime() > snap.selection.end.getTime();
       }
       return false;
-    }, [day, snap]);
+    }, [day, snap.selection, snap.max, snap.min, snap.focused]);
 
     const bg = useMemo(() => {
       if (!isInScope) return undefined;
-      if (isDisabled) return "gray.100";
+      if (isDisabled) return undefined;
       if (isSelected) return `${snap.colorScheme}.300`;
       if (snap.isHovered && inHoverRange(snap)(day))
         return `${snap.colorScheme}.100`;
@@ -77,7 +79,7 @@ const Day = memo(
         onMouseLeave={handleLeave}
         onClick={() => !isDisabled && onSelect(state)(snap)(day)}
         fontWeight={isToday ? "bold" : undefined}
-        color={isInScope ? "gray.800" : "gray.300"}
+        color={isDisabled ? "gray.300" : isInScope ? "gray.800" : "gray.300"}
       >
         {day.getDate()}
       </Box>

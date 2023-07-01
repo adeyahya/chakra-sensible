@@ -83,6 +83,8 @@ export const DateRange = (props: DateRangeProps) => {
   useEffect(() => {
     state.viewing = viewing;
     if (props.colorScheme) state.colorScheme = props.colorScheme;
+    if (props.max) state.max = props.max;
+    if (props.min) state.min = props.min;
   }, [viewing, state, props]);
 
   useEffect(() => {
@@ -243,8 +245,19 @@ export const DateRange = (props: DateRangeProps) => {
                   </Stack>
                 ))}
               </HStack>
-              <Flex flexDir="row">
-                <Button mt={3} mb={1} size="sm" onClick={viewToday}>
+              <Flex
+                flexDir="row"
+                mt={4}
+                borderTopWidth="1px"
+                borderColor="gray.100"
+              >
+                <Button
+                  variant="link"
+                  mt={3}
+                  mb={1}
+                  size="sm"
+                  onClick={viewToday}
+                >
                   Today
                 </Button>
               </Flex>

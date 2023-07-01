@@ -18,6 +18,8 @@ const InputDate = memo(
       selection,
       colorScheme,
       focused,
+      max,
+      min,
       format: dateFormat,
       type: inputType,
     } = useSnapshot(state);
@@ -35,6 +37,12 @@ const InputDate = memo(
       if (!val) return;
       const parsed = safeParse(val, dateFormat);
       if (!parsed) return;
+
+      /**
+       * min max validation
+       */
+      if (max && parsed.getTime() > max.getTime()) return;
+      if (min && parsed.getTime() < min.getTime()) return;
 
       /**
        * prevent update end to be earlier than start and

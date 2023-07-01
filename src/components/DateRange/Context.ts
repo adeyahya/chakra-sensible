@@ -14,6 +14,8 @@ export interface AppContextType {
   hovering: Date | null;
   colorScheme: string;
   format: string;
+  max?: Date | null;
+  min?: Date | null;
   type: "date" | "datetime-local";
 }
 
