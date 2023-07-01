@@ -1,7 +1,10 @@
 {
   "name": "chakra-sensible",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "type": "module",
+  "repository": {
+    "url": "https://github.com/adeyahya/chakra-sensible"
+  },
   "author": {
     "email": "adeyahyaprasetyo@gmail.com",
     "name": "Ade Yahya Prasetyo",
