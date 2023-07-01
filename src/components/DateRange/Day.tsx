@@ -32,7 +32,9 @@ const Day = memo(
       return inRange(day, snap.selection.start, snap.selection.end);
     }, [day, snap.selection.end, snap.selection.start]);
 
-    const isInScope = inScope(segment)(day)(snap);
+    const isInScope = inScope(snap.type === "datetime-local" ? "all" : segment)(
+      day
+    )(snap);
 
     const isToday = useMemo(() => {
       return format(day, "ddMMyy") === format(new Date(), "ddMMyy");
@@ -42,14 +44,30 @@ const Day = memo(
       if (snap.max && day.getTime() > snap.max.getTime()) return true;
       if (snap.min && day.getTime() < snap.min.getTime()) return true;
       if (!snap.selection.start && !snap.selection.end) return false;
-      if (snap.selection.start && snap.focused === "end") {
+      if (
+        snap.type !== "datetime-local" &&
+        snap.selection.start &&
+        snap.focused === "end"
+      ) {
         return day.getTime() < snap.selection.start.getTime();
       }
-      if (snap.selection.end && snap.focused === "start") {
+      if (
+        snap.type !== "datetime-local" &&
+        snap.selection.end &&
+        snap.focused === "start"
+      ) {
         return day.getTime() > snap.selection.end.getTime();
       }
       return false;
-    }, [day, snap.selection, snap.max, snap.min, snap.focused]);
+    }, [
+      snap.max,
+      snap.min,
+      snap.selection.start,
+      snap.selection.end,
+      snap.type,
+      snap.focused,
+      day,
+    ]);
 
     const bg = useMemo(() => {
       if (!isInScope) return undefined;

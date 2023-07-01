@@ -1,2 +1,2 @@
 export * from "./components/DateRange/DateRange";
-export * from "./components/DateTimeRange";
+export * from "./components/DateRange/DateTimeRange";

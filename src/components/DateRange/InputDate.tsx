@@ -24,7 +24,9 @@ const InputDate = memo(
       type: inputType,
     } = useSnapshot(state);
 
-    const handleFocus = () => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const handleFocus = (e: any) => {
+      e.preventDefault();
       state.focused = props.name;
     };
     const value = useMemo(() => {
@@ -78,6 +80,7 @@ const InputDate = memo(
         onChange={handleChange}
         value={value}
         onFocus={handleFocus}
+        onClick={handleFocus}
         borderColor={
           focused === props.name ? `${colorScheme}.500` : "transparent"
         }

@@ -1,5 +1,12 @@
+import {
+  useContext,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  memo,
+} from "react";
 import { Flex, Box, Text, forwardRef } from "@chakra-ui/react";
-import { useContext, useEffect, useLayoutEffect, useMemo, useRef } from "react";
 import format from "date-fns/format";
 import setMinutes from "date-fns/setMinutes";
 import setHours from "date-fns/setHours";
@@ -12,7 +19,7 @@ type Props = {
   onChange: (d: Date) => void;
 };
 
-const Clock = (props: Props) => {
+const Clock = memo((props: Props) => {
   const outerRef = useRef<HTMLDivElement>(null);
   const scrollerHoursRef = useRef<HTMLDivElement>(null);
   const scrollerMinutesRef = useRef<HTMLDivElement>(null);
@@ -126,7 +133,7 @@ const Clock = (props: Props) => {
       </Flex>
     </Flex>
   );
-};
+});
 
 const Unit = forwardRef(
   (

@@ -18,9 +18,11 @@ export const inHoverRange = (snap: AppContextType) => (d: Date) => {
 };
 
 export const inScope =
-  (segment: "start" | "end") => (d: Date) => (snap: AppContextType) => {
+  (segment: "start" | "end" | "all") => (d: Date) => (snap: AppContextType) => {
     const month =
-      segment === "start" ? snap.viewing : addMonths(snap.viewing, 1);
+      segment === "start" || segment === "all"
+        ? snap.viewing
+        : addMonths(snap.viewing, 1);
     return inRange(d, startOfMonth(month), endOfMonth(month));
   };
 

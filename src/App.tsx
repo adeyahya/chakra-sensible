@@ -5,7 +5,7 @@ const App = () => {
   return (
     <Container minH="100vh">
       <Stack>
-        <DateRange />
+        <DateRange colorScheme="pink" />
         <DateTimeRange />
       </Stack>
     </Container>
