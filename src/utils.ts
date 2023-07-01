@@ -23,5 +23,5 @@ export const inRange = (d: Date, min: Date, max: Date) => {
   const targetTime = d.getTime();
   const minTime = startOfDay(min).getTime();
   const maxTime = endOfDay(max).getTime();
-  return targetTime < maxTime && targetTime > minTime;
+  return targetTime <= maxTime && targetTime >= minTime;
 };
