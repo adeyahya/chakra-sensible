@@ -73,6 +73,8 @@ export const DateRange = (props: DateRangeProps) => {
       },
       isHovered: false,
       colorScheme: colorScheme ?? "blue",
+      format: "yyyy-MM-dd",
+      type: "date",
       viewing: viewing,
     })
   ).current;

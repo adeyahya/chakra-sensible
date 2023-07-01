@@ -13,6 +13,8 @@ export interface AppContextType {
   isHovered: boolean;
   hovering: Date | null;
   colorScheme: string;
+  format: string;
+  type: "date" | "datetime-local";
 }
 
 export const AppContext = createContext<AppContextType>({
@@ -22,4 +24,6 @@ export const AppContext = createContext<AppContextType>({
   selection: { start: null, end: null },
   isHovered: false,
   colorScheme: "blue",
+  format: "yyyy-MM-dd",
+  type: "date",
 });

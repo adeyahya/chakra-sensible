@@ -14,20 +14,26 @@ const InputDate = memo(
     }
   ) => {
     const state = useContext(AppContext);
-    const { selection, colorScheme, focused } = useSnapshot(state);
+    const {
+      selection,
+      colorScheme,
+      focused,
+      format: dateFormat,
+      type: inputType,
+    } = useSnapshot(state);
 
     const handleFocus = () => {
       state.focused = props.name;
     };
     const value = useMemo(() => {
       if (!selection[props.name]) return "";
-      return format(selection[props.name]!, "yyyy-MM-dd");
-    }, [props.name, selection]);
+      return format(selection[props.name]!, dateFormat);
+    }, [props.name, selection, dateFormat]);
 
     const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
       const val = e.currentTarget.value;
       if (!val) return;
-      const parsed = safeParse(val, "yyyy-MM-dd");
+      const parsed = safeParse(val, dateFormat);
       if (!parsed) return;
 
       /**
@@ -58,7 +64,7 @@ const InputDate = memo(
         borderRadius="none"
         px="2"
         py="1"
-        type="date"
+        type={inputType}
         borderBottomWidth="2px"
         borderStyle="solid"
         onChange={handleChange}

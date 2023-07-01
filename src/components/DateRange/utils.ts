@@ -29,6 +29,7 @@ export const onSelect =
     if (snap.focused) {
       state.selection[snap.focused] = d;
     }
+    if (snap.type === "datetime-local") return;
     if (snap.focused === "end") {
       if (snap.selection.start) {
         return (state.focused = null);

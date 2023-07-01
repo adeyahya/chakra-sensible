@@ -1,9 +1,11 @@
 import { Flex, Box, Text, forwardRef } from "@chakra-ui/react";
-import { useEffect, useLayoutEffect, useMemo, useRef } from "react";
+import { useContext, useEffect, useLayoutEffect, useMemo, useRef } from "react";
 import format from "date-fns/format";
 import setMinutes from "date-fns/setMinutes";
 import setHours from "date-fns/setHours";
 import { HOURS, MINUTES } from "src/constant";
+import { AppContext } from "./Context";
+import { useSnapshot } from "valtio";
 
 type Props = {
   value?: Date | null;
@@ -67,7 +69,7 @@ const Clock = (props: Props) => {
       scrollerHoursRef.current.style.height = `${height}px`;
     if (scrollerMinutesRef.current)
       scrollerMinutesRef.current.style.height = `${height}px`;
-  }, []);
+  });
 
   return (
     <Flex
@@ -131,6 +133,9 @@ const Unit = forwardRef(
     props: { value: string; isActive?: boolean; onChange: (d: string) => void },
     ref
   ) => {
+    const state = useContext(AppContext);
+    const snap = useSnapshot(state);
+    const { colorScheme } = snap;
     const handleClick = () => {
       props.onChange(props.value);
     };
@@ -142,7 +147,7 @@ const Unit = forwardRef(
         px="3"
         py="1"
         cursor="pointer"
-        bg={props.isActive ? "blue.200" : undefined}
+        bg={props.isActive ? `${colorScheme}.200` : undefined}
         _hover={props.isActive ? undefined : { bg: "gray.100" }}
       >
         <Text textAlign="center">{props.value}</Text>

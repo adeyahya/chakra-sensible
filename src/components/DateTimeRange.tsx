@@ -1,31 +1,18 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
-import {
-  useCallback,
-  useState,
-  createContext,
-  ChangeEvent,
-  useContext,
-  useMemo,
-  useEffect,
-} from "react";
+import { useEffect, useRef } from "react";
 import {
   Stack,
   HStack,
   Box,
-  Input,
   Popover,
   PopoverTrigger,
   PopoverContent,
   PopoverArrow,
   PopoverBody,
-  InputProps,
   IconButton,
   Flex,
   Text,
   Button,
-  BoxProps,
-  Grid,
-  GridItem,
 } from "@chakra-ui/react";
 import {
   ArrowRightIcon,
@@ -37,64 +24,18 @@ import {
   CalendarIcon,
 } from "@chakra-ui/icons";
 import { useLilius } from "use-lilius";
-import startOfMonth from "date-fns/startOfMonth";
-import startOfDay from "date-fns/startOfDay";
-import endOfMonth from "date-fns/endOfMonth";
-import addMonths from "date-fns/addMonths";
 import format from "date-fns/format";
-import formatISO from "date-fns/formatISO";
-import { isDayEq, safeParse } from "../utils";
 
 import Weeks from "./Weeks";
-import Clock from "./Clock";
+import Clock from "./DateRange/Clock";
+import { DateRangeProps } from "./DateRange/DateRange";
+import { AppContext, AppContextType } from "./DateRange/Context";
+import { proxy, useSnapshot } from "valtio";
+import { onSelect } from "./DateRange/utils";
+import InputDate from "./DateRange/InputDate";
+import Day from "./DateRange/Day";
 
-type Value = Date | null;
-type Focus = "start" | "end" | null;
-type Selection = {
-  start: Value;
-  end: Value;
-};
-interface ContextType {
-  focused: Focus;
-  selection: Selection;
-  isHovered: boolean;
-  hovering: Date | null;
-  colorScheme: string;
-  inRange: (date: Date, min: Date, max: Date) => boolean;
-  inScope: (segment: "start" | "end") => (d: Date) => boolean;
-  setHovering: (d: Date | null) => void;
-  setHover: (d: boolean) => void;
-  setSelection: React.Dispatch<React.SetStateAction<Selection>>;
-  inHoverRange: (d: Date) => boolean;
-  onSelect: (d: Date) => void;
-  setFocused: (d: Focus) => void;
-}
-
-const AppContext = createContext<ContextType>({
-  focused: null,
-  hovering: null,
-  selection: { start: null, end: null },
-  isHovered: false,
-  colorScheme: "blue",
-  inRange: () => false,
-  inScope: () => () => false,
-  setHovering: () => null,
-  setHover: () => null,
-  setSelection: () => null,
-  inHoverRange: () => false,
-  onSelect: () => null,
-  setFocused: () => null,
-});
-
-export type DateTimeRangeProps = BoxProps & {
-  value?: [Value, Value];
-  defaultValue?: [Value, Value];
-  onChange?: (d: [Value, Value]) => void;
-  min?: Date;
-  max?: Date;
-  colorScheme?: string;
-};
-export const DateTimeRange = (props: DateTimeRangeProps) => {
+export const DateTimeRange = (props: DateRangeProps) => {
   const {
     value,
     defaultValue,
@@ -105,17 +46,10 @@ export const DateTimeRange = (props: DateTimeRangeProps) => {
     children,
     ...rest
   } = props;
-  const [focused, setFocused] = useState<Focus>(null);
-  const [selection, setSelection] = useState<Selection>({
-    start: defaultValue?.[0] ?? value?.[0] ?? null,
-    end: defaultValue?.[1] ?? value?.[1] ?? null,
-  });
-  const [isHovered, setHover] = useState<boolean>(false);
-  const [hovering, setHovering] = useState<Date | null>(null);
+
   const {
     calendar,
     viewing,
-    inRange,
     viewNextMonth,
     viewPreviousMonth,
     viewNextYear,
@@ -124,52 +58,59 @@ export const DateTimeRange = (props: DateTimeRangeProps) => {
   } = useLilius({
     numberOfMonths: 1,
   });
+  const state = useRef(
+    proxy<AppContextType>({
+      focused: null,
+      hovering: null,
+      selection: {
+        start: value?.[0] ?? defaultValue?.[0] ?? null,
+        end: value?.[1] ?? defaultValue?.[1] ?? null,
+      },
+      isHovered: false,
+      colorScheme: colorScheme ?? "blue",
+      format: "yyyy-MM-dd'T'HH:mm",
+      type: "datetime-local",
+      viewing: viewing,
+    })
+  ).current;
+  const snap = useSnapshot(state);
+  const { selection, focused } = snap;
+
+  useEffect(() => {
+    state.viewing = viewing;
+    if (props.colorScheme) state.colorScheme = props.colorScheme;
+  }, [viewing, state, props]);
 
   useEffect(() => {
     if (!onChange) return;
     onChange([selection.start, selection.end]);
+  }, [onChange, selection]);
+
+  useEffect(() => {
+    if (
+      props.value?.[0] &&
+      props.value[0].getTime() !== selection.start?.getTime()
+    ) {
+      state.selection.start = props.value[0];
+    }
+    if (
+      props.value?.[1] &&
+      props.value[1].getTime() !== selection.end?.getTime()
+    ) {
+      state.selection.end = props.value[1];
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selection, onChange]);
+  }, [props.value]);
 
   const time = viewing.getTime();
 
-  const handleClear = () => setSelection({ start: null, end: null });
-
-  const inScope = useCallback(
-    (segment: "start" | "end") => (d: Date) => {
-      const month = segment === "start" ? viewing : addMonths(viewing, 1);
-      return inRange(d, startOfMonth(month), endOfMonth(month));
-    },
-    [inRange, viewing]
-  );
-
-  const inHoverRange = useCallback(
-    (d: Date) => {
-      if (!hovering) return false;
-      if (selection.start && focused === "end") {
-        return inRange(d, selection.start, hovering);
-      }
-      if (selection.end && focused === "start") {
-        return inRange(d, hovering, selection.end);
-      }
-
-      return false;
-    },
-    [hovering, inRange, selection, focused]
-  );
-
-  const onSelect = useCallback(
-    (d: Date) => {
-      setSelection((prev) => {
-        if (!focused) return prev;
-        return Object.assign({}, prev, { [focused]: d });
-      });
-    },
-    [focused]
-  );
+  const handleClear = () => {
+    state.selection.start = null;
+    state.selection.end = null;
+  };
 
   const handleOpen = () => {
-    if (focused === null) setFocused("start");
+    if (focused === null) state.focused = "start";
   };
 
   const isOpen = focused !== null;
@@ -181,26 +122,10 @@ export const DateTimeRange = (props: DateTimeRangeProps) => {
       : null;
 
   return (
-    <AppContext.Provider
-      value={{
-        colorScheme,
-        inRange,
-        inScope,
-        isHovered,
-        setHover,
-        setHovering,
-        selection,
-        setSelection,
-        focused,
-        setFocused,
-        hovering,
-        inHoverRange,
-        onSelect,
-      }}
-    >
+    <AppContext.Provider value={state}>
       {focused && (
         <Box
-          onClick={() => setFocused(null)}
+          onClick={() => (state.focused = null)}
           w="100vw"
           h="100vh"
           position="fixed"
@@ -242,7 +167,10 @@ export const DateTimeRange = (props: DateTimeRangeProps) => {
                 />
                 <IconButton
                   opacity={0.2}
-                  onClick={handleClear}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleClear();
+                  }}
                   _hover={{ opacity: 1 }}
                   size="xs"
                   variant="unstyled"
@@ -319,7 +247,7 @@ export const DateTimeRange = (props: DateTimeRangeProps) => {
                     </HStack>
                   </Flex>
                 </Box>
-                <Clock value={currentValue} onChange={onSelect} />
+                <Clock value={currentValue} onChange={onSelect(state)(snap)} />
               </Flex>
               <Flex flexDir="row">
                 <Button
@@ -338,177 +266,5 @@ export const DateTimeRange = (props: DateTimeRangeProps) => {
         </Box>
       </Popover>
     </AppContext.Provider>
-  );
-};
-
-const Day = ({ day, segment }: { day: Date; segment: "start" | "end" }) => {
-  const {
-    onSelect,
-    inHoverRange,
-    setHovering,
-    setHover,
-    isHovered,
-    inScope,
-    selection,
-    focused,
-    inRange,
-    colorScheme,
-  } = useContext(AppContext);
-
-  const handleHover = (d: Date) => {
-    setHovering(d);
-    setHover(true);
-  };
-
-  const handleLeave = () => {
-    setHover(false);
-  };
-
-  const isSelected = useMemo(
-    () => isDayEq(selection.start, day) || isDayEq(selection.end, day),
-    [day, selection.end, selection.start]
-  );
-
-  const isInSelectionRange = useMemo(() => {
-    if (!selection.start || !selection.end) return false;
-    return inRange(day, selection.start, selection.end);
-  }, [selection, inRange, day]);
-
-  const isInScope = useMemo(
-    () => inScope(segment)(day),
-    [segment, day, inScope]
-  );
-
-  const isToday = useMemo(() => {
-    return format(day, "ddMMyy") === format(new Date(), "ddMMyy");
-  }, [day]);
-
-  const isDisabled = useMemo(() => {
-    if (!selection.start && !selection.end) return false;
-    if (selection.start && focused === "end") {
-      return day.getTime() < selection.start.getTime();
-    }
-    if (selection.end && focused === "start") {
-      return day.getTime() > selection.end.getTime();
-    }
-    return false;
-  }, [day, focused, selection.end, selection.start]);
-
-  const bg = useMemo(() => {
-    if (!isInScope) return undefined;
-    if (isDisabled) return "gray.100";
-    if (isSelected) return `${colorScheme}.300`;
-    if (isHovered && inHoverRange(day)) return `${colorScheme}.100`;
-    if (isInSelectionRange) return `${colorScheme}.100`;
-    return undefined;
-  }, [
-    colorScheme,
-    day,
-    inHoverRange,
-    isDisabled,
-    isHovered,
-    isInSelectionRange,
-    isSelected,
-    isInScope,
-  ]);
-
-  return (
-    <Box
-      flex={1}
-      px={2}
-      py={1}
-      fontSize="sm"
-      _hover={
-        isInScope && !isSelected && !isDisabled ? { bg: "gray.100" } : undefined
-      }
-      cursor="pointer"
-      textAlign="center"
-      bg={bg}
-      onMouseEnter={isInScope ? () => handleHover(day) : undefined}
-      onMouseLeave={handleLeave}
-      onClick={() => !isDisabled && onSelect(day)}
-      fontWeight={isToday ? "bold" : undefined}
-      color={isInScope ? "gray.800" : "gray.300"}
-    >
-      {day.getDate()}
-    </Box>
-  );
-};
-
-const InputDate = (
-  props: Pick<InputProps, "onChange" | "value"> & {
-    name: "start" | "end";
-  }
-) => {
-  const { setFocused, selection, setSelection, focused, colorScheme } =
-    useContext(AppContext);
-
-  const handleFocus = () => {
-    setFocused(props.name);
-  };
-  const value = useMemo(() => {
-    if (!selection[props.name]) return "";
-    return format(selection[props.name]!, "yyyy-MM-dd'T'HH:mm");
-  }, [selection, props.name]);
-
-  const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
-    const val = e.currentTarget.value;
-    if (!val) return;
-    const parsed = safeParse(val, "yyyy-MM-dd'T'HH:mm");
-    if (!parsed) return;
-
-    /**
-     * prevent update end to be earlier than start and
-     * prevent update start later than end
-     */
-    if (
-      selection.start &&
-      props.name === "end" &&
-      parsed.getTime() <= selection.start.getTime()
-    )
-      return;
-
-    if (
-      selection.end &&
-      props.name === "start" &&
-      parsed.getTime() >= selection.end.getTime()
-    )
-      return;
-
-    setSelection((prev) => {
-      return Object.assign({}, prev, { [props.name]: parsed });
-    });
-  };
-
-  return (
-    <Input
-      flex="1"
-      variant="unstyled"
-      borderRadius="none"
-      px="2"
-      py="1"
-      type="datetime-local"
-      borderBottomWidth="2px"
-      borderStyle="solid"
-      onChange={handleChange}
-      value={value}
-      onFocus={handleFocus}
-      borderColor={
-        focused === props.name ? `${colorScheme}.500` : "transparent"
-      }
-      _focus={{
-        borderColor: `${colorScheme}.500`,
-      }}
-      _active={{
-        borderColor: `${colorScheme}.500`,
-      }}
-      size="md"
-      css={{
-        "&::-webkit-calendar-picker-indicator": {
-          display: "none",
-        },
-      }}
-      {...props}
-    />
   );
 };
