@@ -97,13 +97,15 @@ export const DateTimeRange = (props: DateRangeProps) => {
 
   useEffect(() => {
     if (
-      props.value?.[0] &&
+      props.value &&
+      props.value[0] &&
       props.value[0].getTime() !== selection.start?.getTime()
     ) {
       state.selection.start = props.value[0];
     }
     if (
-      props.value?.[1] &&
+      props.value &&
+      props.value[1] &&
       props.value[1].getTime() !== selection.end?.getTime()
     ) {
       state.selection.end = props.value[1];
