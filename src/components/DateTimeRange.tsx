@@ -24,6 +24,8 @@ import {
   Text,
   Button,
   BoxProps,
+  Grid,
+  GridItem,
 } from "@chakra-ui/react";
 import {
   ArrowRightIcon,
@@ -36,12 +38,15 @@ import {
 } from "@chakra-ui/icons";
 import { useLilius } from "use-lilius";
 import startOfMonth from "date-fns/startOfMonth";
+import startOfDay from "date-fns/startOfDay";
 import endOfMonth from "date-fns/endOfMonth";
 import addMonths from "date-fns/addMonths";
 import format from "date-fns/format";
+import formatISO from "date-fns/formatISO";
 import { isDayEq, safeParse } from "../utils";
 
 import Weeks from "./Weeks";
+import Clock from "./Clock";
 
 type Value = Date | null;
 type Focus = "start" | "end" | null;
@@ -81,7 +86,7 @@ const AppContext = createContext<ContextType>({
   setFocused: () => null,
 });
 
-export type DateRangeProps = BoxProps & {
+export type DateTimeRangeProps = BoxProps & {
   value?: [Value, Value];
   defaultValue?: [Value, Value];
   onChange?: (d: [Value, Value]) => void;
@@ -89,7 +94,7 @@ export type DateRangeProps = BoxProps & {
   max?: Date;
   colorScheme?: string;
 };
-export const DateRange = (props: DateRangeProps) => {
+export const DateTimeRange = (props: DateTimeRangeProps) => {
   const {
     value,
     defaultValue,
@@ -117,7 +122,7 @@ export const DateRange = (props: DateRangeProps) => {
     viewPreviousYear,
     viewToday,
   } = useLilius({
-    numberOfMonths: 2,
+    numberOfMonths: 1,
   });
 
   useEffect(() => {
@@ -159,16 +164,8 @@ export const DateRange = (props: DateRangeProps) => {
         if (!focused) return prev;
         return Object.assign({}, prev, { [focused]: d });
       });
-      setFocused((prev) => {
-        if (prev === "end") {
-          if (selection.start) return null;
-          return "start";
-        }
-        if (prev === "start") return "end";
-        return "start";
-      });
     },
-    [focused, selection]
+    [focused]
   );
 
   const handleOpen = () => {
@@ -176,6 +173,12 @@ export const DateRange = (props: DateRangeProps) => {
   };
 
   const isOpen = focused !== null;
+  const currentValue =
+    focused === "start"
+      ? selection.start
+      : focused === "end"
+      ? selection.end
+      : null;
 
   return (
     <AppContext.Provider
@@ -251,71 +254,82 @@ export const DateRange = (props: DateRangeProps) => {
           </PopoverTrigger>
           <PopoverContent w="full">
             <PopoverArrow />
-            <PopoverBody>
-              <Flex pb="3" w="full" flexDir="row" align="center">
-                <Flex flexDir="row" align="center">
-                  <IconButton
-                    onClick={viewPreviousYear}
-                    size="xs"
-                    variant="ghost"
-                    aria-label="prev-year"
-                    icon={<ArrowLeftIcon color="gray.500" w="2" h="2" />}
-                  />
-                  <IconButton
-                    onClick={viewPreviousMonth}
-                    size="xs"
-                    variant="ghost"
-                    aria-label="prev-month"
-                    icon={<ChevronLeftIcon color="gray.500" />}
-                  />
-                </Flex>
-                <Text textAlign="center" flex="1">
-                  {format(viewing, "MMM yyyy")}
-                </Text>
-                <Text textAlign="center" flex="1">
-                  {format(addMonths(viewing, 1), "MMM yyyy")}
-                </Text>
-                <Flex>
-                  <IconButton
-                    onClick={viewNextMonth}
-                    size="xs"
-                    variant="ghost"
-                    aria-label="next-month"
-                    icon={<ChevronRightIcon color="gray.500" />}
-                  />
-                  <IconButton
-                    onClick={viewNextYear}
-                    size="xs"
-                    variant="ghost"
-                    aria-label="next-year"
-                    icon={<ArrowRightIcon color="gray.500" w="2" h="2" />}
-                  />
-                </Flex>
-              </Flex>
-              <HStack align="start" spacing="6">
-                {calendar.map((months, midx) => (
-                  <Stack key={`${time}-${midx}`}>
-                    <Weeks />
-                    {months.map((weeks, widx) => (
-                      <HStack
-                        spacing="0"
-                        flex={1}
-                        key={`${time}-${midx}-${widx}`}
-                      >
-                        {weeks.map((day) => (
-                          <Day
-                            segment={midx === 0 ? "start" : "end"}
-                            key={`${time}-${midx}-${widx}-${day.getTime()}`}
-                            day={day}
-                          />
-                        ))}
-                      </HStack>
-                    ))}
-                  </Stack>
-                ))}
-              </HStack>
+            <PopoverBody pr="0">
               <Flex flexDir="row">
-                <Button mt={3} mb={1} size="sm" onClick={viewToday}>
+                <Box>
+                  <Flex pb="3" w="full" flexDir="row" align="center">
+                    <Flex flexDir="row" align="center">
+                      <IconButton
+                        onClick={viewPreviousYear}
+                        size="xs"
+                        variant="ghost"
+                        aria-label="prev-year"
+                        icon={<ArrowLeftIcon color="gray.500" w="2" h="2" />}
+                      />
+                      <IconButton
+                        onClick={viewPreviousMonth}
+                        size="xs"
+                        variant="ghost"
+                        aria-label="prev-month"
+                        icon={<ChevronLeftIcon color="gray.500" />}
+                      />
+                    </Flex>
+                    <Text textAlign="center" flex="1">
+                      {format(viewing, "MMM yyyy")}
+                    </Text>
+                    <Flex>
+                      <IconButton
+                        onClick={viewNextMonth}
+                        size="xs"
+                        variant="ghost"
+                        aria-label="next-month"
+                        icon={<ChevronRightIcon color="gray.500" />}
+                      />
+                      <IconButton
+                        onClick={viewNextYear}
+                        size="xs"
+                        variant="ghost"
+                        aria-label="next-year"
+                        icon={<ArrowRightIcon color="gray.500" w="2" h="2" />}
+                      />
+                    </Flex>
+                  </Flex>
+                  <Flex flexDir="row">
+                    <HStack align="start" spacing="6">
+                      {calendar.map((months, midx) => (
+                        <Stack key={`${time}-${midx}`}>
+                          <Weeks />
+                          {months.map((weeks, widx) => (
+                            <HStack
+                              spacing="0"
+                              flex={1}
+                              key={`${time}-${midx}-${widx}`}
+                            >
+                              {weeks.map((day) => (
+                                <Day
+                                  segment={midx === 0 ? "start" : "end"}
+                                  key={`${time}-${midx}-${widx}-${day.getTime()}`}
+                                  day={day}
+                                />
+                              ))}
+                            </HStack>
+                          ))}
+                        </Stack>
+                      ))}
+                    </HStack>
+                  </Flex>
+                </Box>
+                <Clock value={currentValue} onChange={onSelect} />
+              </Flex>
+              <Flex flexDir="row">
+                <Button
+                  mt={3}
+                  ml={2}
+                  mb={1}
+                  size="sm"
+                  variant="link"
+                  onClick={viewToday}
+                >
                   Today
                 </Button>
               </Flex>
@@ -434,13 +448,13 @@ const InputDate = (
   };
   const value = useMemo(() => {
     if (!selection[props.name]) return "";
-    return format(selection[props.name]!, "yyyy-MM-dd");
+    return format(selection[props.name]!, "yyyy-MM-dd'T'HH:mm");
   }, [selection, props.name]);
 
   const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
     const val = e.currentTarget.value;
     if (!val) return;
-    const parsed = safeParse(val, "yyyy-MM-dd");
+    const parsed = safeParse(val, "yyyy-MM-dd'T'HH:mm");
     if (!parsed) return;
 
     /**
@@ -473,7 +487,7 @@ const InputDate = (
       borderRadius="none"
       px="2"
       py="1"
-      type="date"
+      type="datetime-local"
       borderBottomWidth="2px"
       borderStyle="solid"
       onChange={handleChange}

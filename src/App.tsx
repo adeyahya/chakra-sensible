@@ -1,10 +1,13 @@
-import { ChakraProvider, Container } from "@chakra-ui/react";
-import { DateRange } from ".";
+import { ChakraProvider, Container, Stack } from "@chakra-ui/react";
+import { DateRange, DateTimeRange } from ".";
 
 const App = () => {
   return (
     <Container minH="100vh">
-      <DateRange />
+      <Stack>
+        <DateRange />
+        <DateTimeRange />
+      </Stack>
     </Container>
   );
 };
