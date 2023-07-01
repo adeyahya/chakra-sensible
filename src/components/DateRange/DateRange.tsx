@@ -60,10 +60,11 @@ export const DateRange = (props: DateRangeProps) => {
     viewNextYear,
     viewPreviousYear,
     viewToday,
+    setViewing,
   } = useLilius({
     numberOfMonths: 2,
-    viewing: props.value?.[0] ?? undefined,
   });
+  const viewed = useRef(false);
   const state = useRef(
     proxy<AppContextType>({
       focused: null,
@@ -86,7 +87,11 @@ export const DateRange = (props: DateRangeProps) => {
     if (props.colorScheme) state.colorScheme = props.colorScheme;
     if (props.max) state.max = props.max;
     if (props.min) state.min = props.min;
-  }, [viewing, state, props]);
+    if (!viewed.current && props.value?.[0]) {
+      setViewing(props.value[0]);
+      viewed.current = true;
+    }
+  }, [viewing, state, props, setViewing]);
 
   useEffect(() => {
     if (!onChange) return;
