@@ -99,6 +99,11 @@ export const DateRange = (props: DateRangeProps) => {
   }, [onChange, snap.selection]);
 
   useEffect(() => {
+    if (props.value?.[0] === null && snap.selection.start !== null)
+      state.selection.start = null;
+    if (props.value?.[1] === null && snap.selection.end !== null)
+      state.selection.end = null;
+
     if (
       props.value &&
       props.value[0] &&
