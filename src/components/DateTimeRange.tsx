@@ -57,6 +57,7 @@ export const DateTimeRange = (props: DateRangeProps) => {
     viewToday,
   } = useLilius({
     numberOfMonths: 1,
+    viewing: props.value?.[0] ?? undefined,
   });
   const state = useRef(
     proxy<AppContextType>({
