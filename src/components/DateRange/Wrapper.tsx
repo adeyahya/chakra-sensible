@@ -49,7 +49,7 @@ const Wrapper = memo(({ children, ...rest }: BoxProps) => {
           }}
           w="full"
           position="relative"
-          zIndex={isOpen ? 999 : 1}
+          zIndex={isOpen ? 999 : 0}
         >
           <PopoverTrigger>
             <HStack
